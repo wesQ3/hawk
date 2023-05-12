@@ -3,6 +3,7 @@ package hawk
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 )
@@ -12,20 +13,26 @@ type RegisterRequest struct {
 	Symbol  string `json:"symbol"`
 }
 
-func Register(faction, symbol string) (*http.Response, error) {
+type RegisterResponse struct {
+	Data struct {
+		Token string `json:"token"`
+	} `json:"data"`
+}
+
+func Register(faction, symbol string) (*RegisterResponse, error) {
 	url := "https://api.spacetraders.io/v2/register"
 
-	requestData := &RegisterRequest{
-		Faction: faction,
-		Symbol:  symbol,
+	payload := map[string]string{
+		"faction": faction,
+		"symbol":  symbol,
 	}
 
-	jsonData, err := json.Marshal(requestData)
+	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
 		return nil, err
 	}
 
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(payloadBytes))
 	if err != nil {
 		return nil, err
 	}
@@ -39,8 +46,26 @@ func Register(faction, symbol string) (*http.Response, error) {
 		return nil, err
 	}
 
-	return resp, nil
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated {
+		return nil, fmt.Errorf("non-201 response: %d", resp.StatusCode)
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var registerResponse RegisterResponse
+	err = json.Unmarshal(body, &registerResponse)
+	if err != nil {
+		return nil, err
+	}
+
+	return &registerResponse, nil
 }
+
 
 type ShipsResponse struct {
 	Data []Ship `json:"data"`
