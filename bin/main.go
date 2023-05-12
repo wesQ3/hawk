@@ -5,19 +5,32 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/wesQ3/hawk"
 )
+
+func main() {
+	faction := "COSMIC"
+	symbol := "HAWK0304"
+	token := os.Getenv("HAWK_TOKEN")
+
+	if token == "" {
+		registerSymbol(faction, symbol)
+	}
+
+	resp, err := hawk.Ships(token)
+	if err != nil {
+		log.Fatalf("Error ships: %v", err)
+	}
+	fmt.Printf("ships: %s\n", resp)
+}
 
 type RegisterResponse struct {
 	Token string `json:"token"`
 }
 
-
-func main() {
-	faction := "COSMIC"
-	symbol := "HAWK2341"
-
+func registerSymbol(faction, symbol string) {
 	resp, err := hawk.Register(faction, symbol)
 	if err != nil {
 		log.Fatalf("Error registering: %v", err)
